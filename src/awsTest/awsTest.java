@@ -345,7 +345,7 @@ public class awsTest {
 		   UnmonitorInstancesRequest request = new UnmonitorInstancesRequest()
 				    .withInstanceIds(instance_id);
 				ec2.unmonitorInstances(request);
-		        System.out.printf("Successfully Monitoring instance %s", instance_id);
+		        System.out.printf("Successfully UnMonitoring instance %s", instance_id);
 
 	   }catch(Exception e) {
 	    	  throw new AmazonClientException("You cannot create an instance. Check the value you entered", e);
