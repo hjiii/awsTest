@@ -9,6 +9,8 @@ import com.amazonaws.auth.profile.ProfileCredentialsProvider;
 import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.AmazonEC2ClientBuilder;
 import com.amazonaws.services.ec2.model.AvailabilityZone;
+import com.amazonaws.services.ec2.model.CreateKeyPairRequest;
+import com.amazonaws.services.ec2.model.CreateKeyPairResult;
 import com.amazonaws.services.ec2.model.DescribeAvailabilityZonesResult;
 import com.amazonaws.services.ec2.model.DescribeImagesRequest;
 import com.amazonaws.services.ec2.model.DescribeInstancesRequest;
@@ -19,6 +21,7 @@ import com.amazonaws.services.ec2.model.Image;
 import com.amazonaws.services.ec2.model.Instance;
 import com.amazonaws.services.ec2.model.InstanceType;
 import com.amazonaws.services.ec2.model.KeyPairInfo;
+import com.amazonaws.services.ec2.model.MonitorInstancesRequest;
 import com.amazonaws.services.ec2.model.RebootInstancesRequest;
 import com.amazonaws.services.ec2.model.RebootInstancesResult;
 import com.amazonaws.services.ec2.model.Region;
@@ -28,6 +31,7 @@ import com.amazonaws.services.ec2.model.RunInstancesResult;
 import com.amazonaws.services.ec2.model.StartInstancesRequest;
 import com.amazonaws.services.ec2.model.StopInstancesRequest;
 import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
+import com.amazonaws.services.ec2.model.UnmonitorInstancesRequest;
 
 public class awsTest {
    /*
@@ -76,11 +80,14 @@ public class awsTest {
          System.out.println(" 5. stop instance 6. create instance ");
          System.out.println(" 7. reboot instance 8. list images ");
          System.out.println(" 9. terminated instances 10.Describe Key pair");
+         System.out.println(" 11. Monitor Instances 12. UnMonitor Instances ");
          System.out.println(" 99. quit ");
          System.out.println("------------------------------------------------------------");
          System.out.print("Enter an integer: ");
 
          number = scan.nextInt();
+         scan.nextLine(); //개행문자(엔터)를 제거하기위해 추가
+
          switch (number) {
          case 1:
             listInstances();
@@ -112,6 +119,12 @@ public class awsTest {
          case 10 :
             keypairDescribe();
             break;
+         case 11 :
+        	 instancesMonitoring();
+             break;
+         case 12 :
+        	 instancesUnMonitoring();
+             break;
          case 99:
             System.out.println("시스템을 종료합니다.");
             return;
@@ -177,44 +190,55 @@ public class awsTest {
 
    public static void startInstances() {
       Scanner scan = new Scanner(System.in);
-      System.out.println("Enter instance id :");
+      System.out.printf("Enter instance id :");
       String instance_id = scan.nextLine();
 
       System.out.printf("Starting instances.... %s", instance_id);
 
-      StartInstancesRequest request = new StartInstancesRequest().withInstanceIds(instance_id);
+      try {
+          StartInstancesRequest request = new StartInstancesRequest().withInstanceIds(instance_id);
 
-      ec2.startInstances(request);
-      System.out.println();
+          ec2.startInstances(request);
+          System.out.println();
 
-      System.out.printf("Successfully started instance %s", instance_id);
-      System.out.println();
-
+          System.out.printf("Successfully started instance %s", instance_id);
+          System.out.println();
+      }catch(Exception e) {
+    	  throw new AmazonClientException("You cannot create an instance. Check the value you entered", e);
+      }
    }
 
    public static void stopInstances() {
       Scanner scan = new Scanner(System.in);
-      System.out.println("Enter instance id :");
+      System.out.printf("Enter instance id :");
       String instance_id = scan.nextLine();
+      
+      try {
+          StopInstancesRequest request = new StopInstancesRequest().withInstanceIds(instance_id);
 
-      StopInstancesRequest request = new StopInstancesRequest().withInstanceIds(instance_id);
+          ec2.stopInstances(request);
 
-      ec2.stopInstances(request);
-
-      System.out.printf("Successfully stoped instance %s", instance_id);
-
+          System.out.printf("Successfully stoped instance %s", instance_id);
+      }catch(Exception e) {
+    	  throw new AmazonClientException("You cannot create an instance. Check the value you entered", e);
+      }
    }
 
    public static void terminatedInstances() {
       Scanner scan = new Scanner(System.in);
-      System.out.println("Enter instance id :");
+      System.out.printf("Enter instance id :");
       String instance_id = scan.nextLine();
+      
+      try {
+          TerminateInstancesRequest request = new TerminateInstancesRequest().withInstanceIds(instance_id);
 
-      TerminateInstancesRequest request = new TerminateInstancesRequest().withInstanceIds(instance_id);
+          ec2.terminateInstances(request);
 
-      ec2.terminateInstances(request);
+          System.out.printf("Successfully terminated instance %s", instance_id);
+      }catch(Exception e) {
+    	  throw new AmazonClientException("You cannot create an instance. Check the value you entered", e);
+      }
 
-      System.out.printf("Successfully terminated instance %s", instance_id);
 
    }
    
@@ -223,21 +247,25 @@ public class awsTest {
             + "Ex: CreateInstance <instance-name> <ami-image-id>\n";
 
       Scanner scan = new Scanner(System.in);
-      System.out.println("Enter ami id :");
+      System.out.printf("Enter ami id :");
       String ami_id = scan.nextLine();
 
       System.out.println("Enter key id :");
       String key_id = scan.nextLine();
+      
+      try {
+    	  RunInstancesRequest run_request = new RunInstancesRequest().withImageId(ami_id)
+    	            .withInstanceType(InstanceType.T2Micro).withMaxCount(1).withMinCount(1).withKeyName(key_id);
 
-      RunInstancesRequest run_request = new RunInstancesRequest().withImageId(ami_id)
-            .withInstanceType(InstanceType.T2Micro).withMaxCount(1).withMinCount(1).withKeyName(key_id);
+    	      RunInstancesResult run_response = ec2.runInstances(run_request);
 
-      RunInstancesResult run_response = ec2.runInstances(run_request);
+    	      String reservation_id = run_response.getReservation().getInstances().get(0).getInstanceId();
 
-      String reservation_id = run_response.getReservation().getInstances().get(0).getInstanceId();
-
-      System.out.printf("Successfully started EC2 instance %s based on AMI %s", reservation_id, ami_id);
-
+    	      System.out.printf("Successfully started EC2 instance %s based on AMI %s", reservation_id, ami_id);   
+      }catch(Exception e) {
+    	  throw new AmazonClientException("You cannot create an instance. Check the value you entered", e);
+      }
+      
    }
 
    public static void rebootInstances() {
@@ -246,14 +274,18 @@ public class awsTest {
       String instance_id = scan.nextLine();
 
       System.out.printf("Rebooting .... %s", instance_id);
+      
+      try {
+    	  RebootInstancesRequest request = new RebootInstancesRequest().withInstanceIds(instance_id);
 
-      RebootInstancesRequest request = new RebootInstancesRequest().withInstanceIds(instance_id);
+          RebootInstancesResult response = ec2.rebootInstances(request);
 
-      RebootInstancesResult response = ec2.rebootInstances(request);
-
-      System.out.println();
-      System.out.printf("Successfully rebooted instance %s", instance_id);
-
+          System.out.println();
+          System.out.printf("Successfully rebooted instance %s", instance_id);
+      }catch(Exception e) {
+    	  throw new AmazonClientException("You cannot create an instance. Check the value you entered", e);
+      }
+     
    }
 
    public static void availableZones() {
@@ -284,5 +316,39 @@ public class awsTest {
       }
 
    }
+   
+   public static void instancesMonitoring() {
+	   String instance_id;
+	   Scanner scan = new Scanner(System.in);
+	   
+	   System.out.printf("Enter instance id :");
+	   instance_id=scan.nextLine();
+	   
+	   try{
+		   MonitorInstancesRequest request = new MonitorInstancesRequest()
+				   .withInstanceIds(instance_id);
+			ec2.monitorInstances(request);
+	        System.out.printf("Successfully Monitoring instance %s", instance_id);
+	   }catch(Exception e) {
+	    	  throw new AmazonClientException("You cannot create an instance. Check the value you entered", e);
+	      }
+   }
+   
+   public static void instancesUnMonitoring() {
+	   String instance_id;
+	   Scanner scan = new Scanner(System.in);
+	   System.out.printf("Enter instance id :");
 
+	   instance_id=scan.nextLine();
+	   
+	   try{
+		   UnmonitorInstancesRequest request = new UnmonitorInstancesRequest()
+				    .withInstanceIds(instance_id);
+				ec2.unmonitorInstances(request);
+		        System.out.printf("Successfully Monitoring instance %s", instance_id);
+
+	   }catch(Exception e) {
+	    	  throw new AmazonClientException("You cannot create an instance. Check the value you entered", e);
+	      }
+   }
 }
